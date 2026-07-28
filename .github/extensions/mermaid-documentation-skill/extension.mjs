@@ -11,6 +11,7 @@
 import { createServer } from "node:http";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { joinSession, createCanvas } from "@github/copilot-sdk/extension";
 
 // One local HTTP server per open canvas instance. Each instance gets its own
@@ -20,7 +21,10 @@ import { joinSession, createCanvas } from "@github/copilot-sdk/extension";
 const servers = new Map();
 
 function renderHtml(instanceId) {
-    const docsDir = path.join(process.cwd(), '.github', 'extensions', 'mermaid-documentation-skill', 'docs');
+    // Resolve docs relative to this extension file regardless of process cwd.
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const docsDir = path.join(__dirname, 'docs');
+
     let readme = 'README not found', skill = 'Skill not found', execLoop = 'ExecutionLoop not found';
     try {
         readme = fs.readFileSync(path.join(docsDir, 'README.md'), 'utf8');
