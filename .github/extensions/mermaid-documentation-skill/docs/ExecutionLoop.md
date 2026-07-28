@@ -49,6 +49,30 @@ Score every finding. Confidence controls remediation only after proof requiremen
 
 ---
 
+## Phase 0: Pre-Flight Validation
+
+Before any repository inspection or documentation work begins, the agent must validate execution feasibility.
+
+### Required Checks
+1. **Repository accessibility:** confirm the repository path exists and is readable.
+2. **Non-empty repository:** at least one source file, configuration file, or project manifest exists. If the repository is empty or contains only a README, abort with status `ABORT: Empty Repository`.
+3. **Scope feasibility:** identify the primary language(s) and confirm at least one recognizable project structure (solution, package.json, Cargo.toml, go.mod, pom.xml, .csproj, Makefile, etc.). If no recognizable structure exists, abort with status `ABORT: Unrecognizable Project Structure`.
+4. **Existing documentation detection:** check whether a `MermaidDiagram/` or equivalent output directory already exists. If it does, operate in **incremental mode** — diff proposed changes against existing artifacts rather than overwriting. Record the prior state hash in the audit trail.
+5. **Evidence scope estimation:** estimate the number of source files in scope. If the scope exceeds the agent's context capacity, partition into sub-scopes and document the partitioning decision.
+
+### Abort Conditions
+If any required check fails with an `ABORT` status, the agent must stop immediately, produce a structured error report (reason, evidence, suggested remedy), and exit. Do not proceed to Phase 1.
+
+### Incremental Mode Rules
+When existing documentation is detected:
+- Load the current audit trail and diagram selection records.
+- Identify which source files have changed since the last documented run (via git diff, timestamps, or hash comparison).
+- Limit re-generation to affected diagrams and claims.
+- Preserve unchanged, previously validated artifacts.
+- Record the incremental scope decision in the audit trail.
+
+---
+
 ## Phase 1: Repository Discovery
 Load:
 - `Knowledge/01-RepositoryDiscovery.md`
@@ -147,40 +171,21 @@ Unsupported claims are not counted as verified because several reviewers agree w
 
 ---
 
-## Phase 5: Self-Correction Loop
-For every failed validation:
-1. Identify the discrepancy.
-2. Locate source-of-truth evidence.
-3. Correct, narrow, or remove the claim.
-4. Regenerate the affected Mermaid diagram.
-5. Rebuild evidence tables.
-6. Re-run diagram-selection and overlap checks when the correction changes a diagram's purpose or value.
-7. Revalidate and recalculate accuracy.
-
-Repeat until:
-
-```text
-Accuracy >= 95%
-```
-
-or no additional correction is possible from available evidence and all limitations are documented.
-
----
-
-## Phase 5A: Parallel Expert Review
+## Phase 5: Multi-Model Parallel Expert Review
 Load:
 - `Knowledge/10-ParallelExpertReview.md`
 - `Knowledge/17-DiagramPortfolioReview.md`
 
-Required independent reviewers:
-- Architecture Reviewer.
-- Flow Reviewer.
-- Evidence Reviewer.
-- Test Coverage Reviewer.
-- Mermaid Standards Reviewer.
-- Diagram Portfolio Reviewer.
+Launch two parallel review agents using **at least 2 different AI model families**:
 
-Reviewers evaluate the same generated documentation and evidence independently before consolidation.
+```text
+Review Agent A (e.g., Claude/Opus):       Review Agent B (e.g., GPT/Codex):
+  • Architecture Reviewer                   • Flow Reviewer
+  • Evidence Reviewer                       • Test Coverage Reviewer
+  • Diagram Portfolio Reviewer              • Mermaid Standards Reviewer
+```
+
+Both agents receive identical context (generated documentation, evidence tables, source code) and produce findings independently. No agent sees the other's output until consolidation.
 
 Each finding must include:
 - Finding ID.
@@ -197,48 +202,71 @@ Diagram Portfolio findings also include the compared diagram and uniqueness stat
 
 ---
 
-## Phase 5B: Confidence Scoring
+## Phase 5A: Confidence Scoring
 Load `Knowledge/11-ConfidenceScoring.md`.
 
 Confidence scale:
-- `99-100%`: trivial, directly proven correction.
-- `90-98%`: straightforward, directly proven correction.
-- `70-89%`: complex or ambiguous correction requiring adjudication.
-- `<70%`: human review candidate; do not auto-fix.
+- `99%`: trivial fix (typo, missing null check, wrong flag, broken reference).
+- `90-95%`: straightforward fix requiring some design thought.
+- `70-80%`: complex fix, may need research or trade-off decisions.
+- `<70%`: hard problem, might be intentional, or requires architectural context. Apply best-evidence recommendation, flag as `LOW_CONFIDENCE_APPLIED` for PR review.
 
 Proof remains mandatory at every confidence level.
 
 ---
 
-## Phase 5C: Review Consolidation
+## Phase 5B: Conflict Resolution and Consolidation
 Load `Knowledge/12-ReviewConsolidationAdjudication.md`.
 
-Consolidate findings into:
-- Agreement findings.
-- Unique findings.
-- Conflicting findings.
+Merge findings from both review agents into:
+- Agreement findings (both agents flagged the same issue).
+- Unique findings (one agent only).
+- Conflicting findings (agents disagree on severity, recommendation, or validity).
 - Rejected findings.
-- Human review candidates.
+- Low-confidence items (flagged for PR review).
 - Diagram redundancy clusters.
 
 Deduplicate reviewer findings and separately identify duplicated diagram content. These are different operations.
 
+### Cross-Model Conflict Rules
+When Review Agent A and Review Agent B produce conflicting findings:
+1. The finding with direct source evidence takes precedence.
+2. If both cite direct evidence for contradictory conclusions, escalate to `LOW_CONFIDENCE_APPLIED` and include both perspectives in the PR description.
+3. If neither has direct evidence, discard the finding.
+
 ---
 
-## Phase 5D: Adjudication, Remediation, and Pruning
-For each consolidated finding:
+## Phase 5C: Self-Correction Loop
+For every accepted finding and failed validation:
+1. Identify the discrepancy.
+2. Locate source-of-truth evidence.
+3. Correct, narrow, or remove the claim.
+4. Regenerate the affected Mermaid diagram.
+5. Rebuild evidence tables.
+6. Re-run diagram-selection and overlap checks when the correction changes a diagram's purpose or value.
+7. Revalidate and recalculate accuracy.
+
+For each consolidated finding requiring remediation:
 1. Locate direct source evidence.
-2. Decide `Accepted`, `Rejected`, `Auto-Fixed`, `Deferred`, or `Requires Human Review`.
+2. Decide `Accepted`, `Rejected`, `Auto-Fixed`, `Deferred`, or `Low-Confidence Applied`.
 3. Apply fixes only when proof and confidence rules pass.
 4. For redundant diagrams, decide `Redesign`, `Merge`, `Remove`, or `Retain with Justification`.
 5. Regenerate affected documentation.
 6. Rebuild evidence and purpose matrices.
 7. Revalidate accuracy and uniqueness.
 
+Repeat until:
+
+```text
+Accuracy >= 95%
+```
+
+or no additional correction is possible from available evidence and all limitations are documented.
+
 ### Auto-Fix Rules
 - `>=90%`: auto-fix allowed only with direct evidence and an unambiguous recommendation.
 - `70-89%`: conditional fix only after adjudication confirms direct evidence.
-- `<70%`: no automatic modification.
+- `<70%`: apply best-evidence recommendation and flag for PR review.
 
 ### Removal Rule
 A diagram may be removed automatically when:
@@ -254,6 +282,7 @@ Load `Knowledge/13-MermaidStandards.md` and `Knowledge/17-DiagramPortfolioReview
 
 Verify:
 - Mermaid syntax and style.
+- Mermaid render validation (parse every diagram with `mermaid.parse()` or equivalent; diagrams that fail to render are invalid regardless of syntax appearance).
 - Evidence traceability.
 - Cross-diagram consistency.
 - Diagram purpose.
@@ -284,6 +313,7 @@ Record:
 
 ## Exit Conditions
 The agent may stop only when every condition is true:
+- Pre-flight validation passed (Phase 0).
 - Always-required artifacts exist.
 - Every generated diagram has a passed Diagram Selection Record.
 - Every generated diagram answers a named engineering question.
@@ -292,22 +322,82 @@ The agent may stop only when every condition is true:
 - Parallel expert review is complete.
 - Confidence scoring and adjudication are complete.
 - High-confidence issues are fixed and revalidated.
-- Low-confidence items are marked for human review.
+- Low-confidence items are documented with evidence and recommendation (not deferred to mid-run human input).
 - Pairwise overlap review is complete.
 - Every retained diagram is `UNIQUE` or `COMPLEMENTARY`.
 - `PARTIALLY REDUNDANT` diagrams have approved justification and correction notes.
 - `REDUNDANT` diagrams are merged, redesigned, or removed.
 - Mermaid syntax and style rules pass.
+- Mermaid render validation passes for every diagram.
 - Audit trail is updated.
+
+---
+
+## Execution Checkpoints
+
+The agent must record a checkpoint after completing each phase boundary. A checkpoint includes:
+- Phase completed.
+- Artifacts generated or modified in this phase.
+- Validation gate status (pass/fail with details).
+- Cumulative accuracy at this point.
+- Timestamp.
+
+Checkpoints enable recovery: if execution is interrupted, resume from the last completed checkpoint rather than restarting from Phase 0. The audit trail must record the interruption and recovery.
+
+---
+
+## Human Interaction Policy
+
+**No human interaction is required or expected during skill execution.** The skill runs autonomously from Phase 0 through Exit Conditions. All decisions — including diagram removal, merging, correction, and pruning — are made by the agent based on evidence and confidence rules.
+
+Human review occurs exclusively at the **pull request level** after the skill completes:
+- The PR contains all generated/updated documentation, the audit trail, evidence tables, and the diagram selection record.
+- Reviewers inspect the final artifacts, proofs, and diagrams.
+- Items previously marked `Requires Human Review` are surfaced in the PR description with their evidence and context so reviewers can adjudicate.
+- The agent does not pause, prompt, or wait for human input at any point during execution.
+
+### Low-Confidence Item Handling
+Items below 70% confidence are **not blocked** — instead:
+1. The agent applies its best-evidence recommendation.
+2. The item is flagged in the audit trail with `LOW_CONFIDENCE_APPLIED` status.
+3. The PR description lists all low-confidence decisions with evidence, alternative interpretations, and rationale.
+4. Human reviewers accept or request changes at PR review time.
 
 ## Final Output Contract
 The final response must include:
 - Artifacts generated, updated, merged, omitted, or removed.
 - Diagram-selection summary.
 - Validation summary: total, verified, failed, ambiguous, and accuracy.
-- Parallel review summary.
-- Confidence distribution.
+- Parallel review summary (including which model families were used).
+- **Confidence distribution table** — every finding with its assigned confidence level:
+
+```text
+| Finding ID | Reviewer | Confidence | Classification | Action Taken |
+|------------|----------|------------|----------------|--------------|
+| ARCH-001   | Architecture (Agent A) | 99% | Trivial fix | Auto-fixed |
+| FLOW-003   | Flow (Agent B) | 92% | Straightforward fix | Auto-fixed |
+| EVID-007   | Evidence (Agent A) | 75% | Complex fix | Adjudicated + fixed |
+| PORT-002   | Portfolio (Agent A) | 55% | Hard problem | Applied best-evidence, flagged for PR |
+```
+
+  Confidence classifications:
+  - `99%` = trivial fix (typo, missing null check, wrong flag, broken reference).
+  - `90-95%` = straightforward fix requiring some design thought.
+  - `70-80%` = complex fix, may need research or trade-off decisions.
+  - `<70%` = hard problem, might be intentional, or requires architectural context.
+
 - Diagram overlap and uniqueness summary.
 - Corrections and removals applied.
-- Human review candidates.
+- Low-confidence decisions applied (with evidence and rationale for PR reviewers).
+- Render validation results for every diagram.
+- Incremental mode summary (if applicable): what changed, what was preserved.
 - Final status: `Complete and Distinct`, `Complete with Documented Limitations`, or `Additional Evidence Required`.
+
+## PR Description Contract
+When the output is committed to a branch, the PR description must include:
+- Summary of all generated/modified documentation.
+- **Full confidence table** with every finding, its confidence level, classification, and action taken.
+- List of all low-confidence decisions (`<70%`) with evidence, alternatives, and rationale.
+- Render validation status for each diagram.
+- Link to the audit trail file for full traceability.
+- Any items that would benefit from human domain expertise, presented as reviewable decisions (not blockers).

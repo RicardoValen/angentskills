@@ -59,3 +59,28 @@ Fix: Name proven data objects and transformations or remove the diagram.
 Problem: Sequential methods were converted into states without persisted or explicit lifecycle evidence.
 
 Fix: Remove the state diagram and document the behavior as a processing flow.
+
+## Empty or Inaccessible Repository
+Problem: The agent started execution on a repository with no source files or an inaccessible path.
+
+Fix: Phase 0 pre-flight validation should have caught this. If it didn't, abort immediately with `ABORT: Empty Repository` or `ABORT: Inaccessible Repository`. Report the path and error in the audit trail.
+
+## Unrecognizable Project Structure
+Problem: No solution file, package manifest, module definition, or project configuration was found.
+
+Fix: Phase 0 should abort with `ABORT: Unrecognizable Project Structure`. If execution proceeded past this point, halt, document the gap, and produce only a minimal `Overview.md` explaining what was found.
+
+## Existing Documentation Overwritten
+Problem: The skill ran on a repository that already had Mermaid documentation and replaced it without diffing.
+
+Fix: Pre-flight validation must detect existing `MermaidDiagram/` or equivalent output directories and switch to incremental mode. If overwrite occurred, restore from git history and re-run in incremental mode.
+
+## Mermaid Diagram Fails to Render
+Problem: A generated diagram passes visual inspection but fails `mermaid.parse()` or equivalent.
+
+Fix: The render validation step in Phase 6 should catch this. Correct the syntax error, re-parse, and record the fix in the audit trail. A diagram that cannot render is never valid.
+
+## Execution Interrupted Without Checkpoint
+Problem: The agent was interrupted mid-phase and no checkpoint was recorded.
+
+Fix: Resume from the last recorded checkpoint. If no checkpoint exists, restart from Phase 0. Record the interruption and recovery in the audit trail.

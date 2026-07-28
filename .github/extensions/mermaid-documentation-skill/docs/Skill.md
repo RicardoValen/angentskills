@@ -29,7 +29,11 @@ Generation, validation, diagram selection, parallel review, adjudication, correc
 - Redundant diagrams must be merged, redesigned, or removed.
 - Absence of a diagram is recorded in the audit trail; do not create empty `Not Applicable` diagram files.
 - Parallel review findings must be scored with confidence before remediation.
-- Findings below 70% confidence must not be auto-fixed.
+- Findings below 70% confidence are applied with best-evidence reasoning and flagged for PR review — they do not block execution.
 - Mermaid flow diagrams use `flowchart TB`; actual state machines use `stateDiagram-v2`.
 - Every Mermaid style directive with a light fill must include `color:#000`.
+- Every generated Mermaid diagram must pass render validation (parseable without errors).
 - The audit trail records discovery, evidence searches, diagram-selection decisions, claim validation, parallel review, overlap analysis, adjudication, corrections, removals, remaining gaps, and final status.
+- **No human interaction during execution.** The skill runs fully autonomously. Human review happens at the PR level after completion.
+- Pre-flight validation must pass before any repository analysis begins.
+- Existing documentation must be detected and handled incrementally, not overwritten blindly.

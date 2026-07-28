@@ -5,6 +5,54 @@ Challenge generated documentation using independent review perspectives before f
 
 Reviewers work independently and do not see other reviewer findings until consolidation.
 
+## Multi-Model Requirement
+
+To ensure genuine independence and reduce single-model blind spots, the parallel review phase **must use at least two distinct AI models** from different model families. Reviewers must be distributed across models so that no single model's biases dominate the findings.
+
+### Minimum Configuration
+- **At least 2 different model families** (e.g., Claude + GPT, Claude + Gemini, GPT + Gemini).
+- **Each model family must handle at least 2 reviewer roles** to provide meaningful coverage.
+- The same prompt, context, and review instructions are provided to each model — only the underlying model differs.
+
+### Rationale
+A single model reviewing its own output (even in different "roles") shares the same training biases, hallucination patterns, and blind spots. Multi-model review catches:
+- Model-specific hallucinations that one family accepts but another flags.
+- Structural assumptions one model makes that another challenges.
+- Evidence gaps one model overlooks due to its reasoning style.
+
+### Recommended Distribution
+
+| Model Family A (e.g., Claude Opus) | Model Family B (e.g., GPT Codex) |
+|---|---|
+| Architecture Reviewer | Flow Reviewer |
+| Evidence Reviewer | Test Coverage Reviewer |
+| Diagram Portfolio Reviewer | Mermaid Standards Reviewer |
+
+The exact assignment may vary based on available models, but the constraint is:
+- No single model family handles more than 4 of the 6 reviewers.
+- At least 2 reviewers run on a different model family from the generation model.
+
+### Execution Pattern
+Launch reviewers in parallel using different model instances:
+
+```text
+Agent 1 — Model Family A (high reasoning effort):
+  Roles: Architecture, Evidence, Diagram Portfolio
+  Input: full generated documentation + evidence tables + code context
+
+Agent 2 — Model Family B (high reasoning effort):
+  Roles: Flow, Test Coverage, Mermaid Standards
+  Input: same full context as Agent 1
+```
+
+Both agents receive identical context and return findings independently. Findings are consolidated only after both complete.
+
+### Fallback
+If only one model family is available (e.g., environment constraints), the agent must:
+1. Document the limitation in the audit trail as `SINGLE_MODEL_REVIEW`.
+2. Run reviewers in **two separate, isolated passes** with different system prompts emphasizing adversarial vs. constructive perspectives.
+3. Flag in the PR description that multi-model review was unavailable.
+
 ## Required Reviewers
 
 ### Architecture Reviewer

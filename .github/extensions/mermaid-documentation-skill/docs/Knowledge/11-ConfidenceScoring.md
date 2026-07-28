@@ -7,10 +7,10 @@ Assign fix confidence from 0-100% to every reviewer finding after evaluating evi
 
 | Confidence | Classification | Description |
 |---|---|---|
-| 99-100% | Trivial proven fix | Syntax error, broken reference, exact duplicate, or other deterministic correction with direct evidence. |
-| 90-98% | Straightforward proven fix | Clear implementation/documentation mismatch or redundant artifact with direct proof and one unambiguous remedy. |
-| 70-89% | Complex or ambiguous fix | Multiple reasonable remedies, incomplete evidence, or architectural trade-off. |
-| <70% | Human review candidate | Intentional behavior is possible, requirements are unclear, or proof is insufficient. |
+| 99% | Trivial fix | Typo, missing null check, wrong flag, broken reference, exact duplicate, or other deterministic correction with direct evidence. |
+| 90-95% | Straightforward fix | Clear implementation/documentation mismatch or redundant artifact with direct proof and one unambiguous remedy. Requires some design thought. |
+| 70-80% | Complex fix | Multiple reasonable remedies, incomplete evidence, or architectural trade-off. May need research or trade-off decisions. |
+| <70% | Hard problem | Might be intentional, requires architectural context, requirements are unclear, or proof is insufficient. Applied with best-evidence reasoning and flagged for PR review. |
 
 ## Evidence Ceiling
 - No direct evidence: confidence cannot exceed 69%.
@@ -31,7 +31,7 @@ Auto-fix allowed only when:
 Conditional fix only after adjudication and independent verification.
 
 ### <70%
-No automatic modification. Preserve the current artifact and add `Requires Human Review`, unless removal is necessary to eliminate an unsupported factual claim.
+Apply best-evidence recommendation. Mark the change with `LOW_CONFIDENCE_APPLIED` in the audit trail. Include the item in the PR description with full evidence context, alternative interpretations, and rationale for the chosen action. Human reviewers adjudicate at PR review time.
 
 ## Voting Adjustment
 - 3+ reviewers agree: confidence may increase up to 10 points, capped by the evidence ceiling.
