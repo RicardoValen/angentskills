@@ -9,6 +9,8 @@
 // imported from this entry point. Keep extension.mjs focused on wiring.
 
 import { createServer } from "node:http";
+import fs from "node:fs";
+import path from "node:path";
 import { joinSession, createCanvas } from "@github/copilot-sdk/extension";
 
 // One local HTTP server per open canvas instance. Each instance gets its own
@@ -18,14 +20,52 @@ import { joinSession, createCanvas } from "@github/copilot-sdk/extension";
 const servers = new Map();
 
 function renderHtml(instanceId) {
+    const docsDir = path.join(process.cwd(), '.github', 'extensions', 'mermaid-documentation-skill', 'docs');
+    let readme = 'README not found', skill = 'Skill not found', execLoop = 'ExecutionLoop not found';
+    try {
+        readme = fs.readFileSync(path.join(docsDir, 'README.md'), 'utf8');
+        skill = fs.readFileSync(path.join(docsDir, 'Skill.md'), 'utf8');
+        execLoop = fs.readFileSync(path.join(docsDir, 'ExecutionLoop.md'), 'utf8');
+    } catch (e) {
+        // ignore and fall back to not found messages
+    }
+
     return `<!doctype html>
 <html>
-  <head><meta charset="utf-8" /><title>mermaid-documentation-skill</title></head>
-  <body style="font-family: system-ui; padding: 1rem;">
-    <h1>mermaid-documentation-skill</h1>
-    <p>Hello from a local canvas server.</p>
-    <p>Instance: <code>${instanceId}</code></p>
-  </body>
+<head>
+  <meta charset="utf-8"/>
+  <title>mermaid-documentation-skill</title>
+  <link rel="stylesheet" href="https://unpkg.com/github-markdown-css@5.1.0/github-markdown.css">
+  <style>body{font-family:system-ui;padding:1rem} .md{max-width:900px;margin:0 auto}</style>
+</head>
+<body>
+  <h1>mermaid-documentation-skill</h1>
+  <p>Instance: <code>${instanceId}</code></p>
+  <nav style="margin-bottom:1rem;">
+    <button onclick="show('readme')">README</button>
+    <button onclick="show('skill')">Skill</button>
+    <button onclick="show('exec')">Execution Loop</button>
+  </nav>
+  <main class="md markdown-body" id="content"></main>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: false });
+    const docs = {
+      readme: ${JSON.stringify(readme)},
+      skill: ${JSON.stringify(skill)},
+      exec: ${JSON.stringify(execLoop)}
+    };
+    function render(md) {
+      const html = marked.parse(md || '');
+      document.getElementById('content').innerHTML = html;
+      mermaid.init(undefined, document.querySelectorAll('.language-mermaid, .mermaid'));
+    }
+    function show(key) { render(docs[key]); }
+    show('readme');
+  </script>
+</body>
 </html>`;
 }
 
