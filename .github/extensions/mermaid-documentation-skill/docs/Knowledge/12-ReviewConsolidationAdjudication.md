@@ -38,7 +38,7 @@ A diagram can be removed when all are true:
 ## Remediation Rules
 - Final confidence `>=90%`: auto-fix with direct evidence and clear recommendation.
 - `70-89%`: adjudicated change with independent validation.
-- `<70%`: no automatic architectural change.
+- `<70%`: apply best-evidence recommendation, flag as `LOW_CONFIDENCE_APPLIED`, and surface in PR description for human review.
 
 ## Audit Requirement
 Record accepted, rejected, fixed, merged, removed, deferred, and human-review findings in `Maintenance/Audit-Trail.md`.

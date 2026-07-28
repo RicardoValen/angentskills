@@ -31,34 +31,51 @@ The strongest default removal candidates are high-level process, sequence, and i
 ## Core Loop
 
 ```text
-Repository Discovery
-↓
-Evidence Inventory
-↓
+Repository
+    ↓
+Pre-Flight Validation
+    ↓
+Repository Discovery + Evidence Inventory
+    ↓
 Diagram Selection
-↓
-Documentation Generation
-↓
-Claim Extraction
-↓
-Proof-Based Verification
-↓
-Self-Correction
-↓
-Six-Way Parallel Expert Review
-↓
-Confidence Scoring with Evidence Ceiling
-↓
-Consolidation and Adjudication
-↓
-Diagram Merge/Removal/Redesign
-↓
-Quality Verification
-↓
-Audit Trail
-↓
-Exit Conditions
+    ↓
+┌─────────────────────────────────┐
+│  Mermaid Documentation Agent    │
+│  (Generation + Claim Extraction │
+│   + Initial Verification)       │
+└───────────────┬─────────────────┘
+                ↓
+    ┌───────────┴───────────┐
+    ↓                       ↓
+┌───────────────┐   ┌───────────────┐
+│ Review Agent A│   │ Review Agent B│
+│ (Claude/Opus) │   │ (GPT/Codex)  │
+│               │   │               │
+│ • Architecture│   │ • Flow        │
+│ • Evidence    │   │ • Test Cov.   │
+│ • Portfolio   │   │ • Mermaid Std │
+└───────┬───────┘   └───────┬───────┘
+        └───────────┬───────┘
+                    ↓
+        Conflict Resolution
+        (Consolidation + Adjudication)
+                    ↓
+           Self-Correction
+        (Evidence-driven fixes)
+                    ↓
+          Validation Loop
+     (Render + Accuracy + Overlap)
+                    ↓
+        Final Documentation
+     (Audit Trail + PR Output)
 ```
+
+### Key Architecture Decisions
+- **Two distinct AI model families** run the 6 reviewer roles in parallel to eliminate single-model bias.
+- **Conflict resolution** merges, deduplicates, and adjudicates findings from both agents before any correction.
+- **Self-correction** only applies after consolidated findings pass confidence and evidence rules.
+- **Validation loop** re-checks render validity, accuracy ≥95%, and diagram uniqueness after corrections.
+- **No human interaction** until the PR is created with full audit trail and diagrams for review.
 
 ## Package Structure
 
